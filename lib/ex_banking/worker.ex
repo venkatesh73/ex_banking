@@ -24,8 +24,7 @@ defmodule ExBanking.Worker do
     {:ok, state}
   end
 
-  def handle_call({:deposit, currency, amount}, _from, state)
-      when is_number(amount) and amount > 0 do
+  def handle_call({:deposit, currency, amount}, _from, state) do
     state =
       case state[currency] do
         nil ->
@@ -38,20 +37,50 @@ defmodule ExBanking.Worker do
     {:reply, {:ok, Float.floor(state[currency] / 1, 2)}, state}
   end
 
-  def handle_call({:deposit, _currency, amount}, _from, state)
-      when not is_number(amount) or amount < 0 do
-    {:reply, {:error, :wrong_arguments}, state}
+  def handle_call({:withdraw, currency, amount}, _from, state) do
+    case state[currency] do
+      nil ->
+        {:reply, {:error, :not_enough_money}, state}
+
+      balance when balance < amount ->
+        {:reply, {:error, :not_enough_money}, state}
+
+      _balance ->
+        state = Map.update!(state, currency, &(&1 - amount))
+        {:reply, {:ok, Float.floor(state[currency] / 1, 2)}, state}
+    end
   end
 
   @spec deposit(user :: String.t(), amount :: number(), currency :: String.t()) ::
           {:ok, number()} | response_error
   def deposit(user, amount, currency) do
-    case get_users_pool_limit(user) do
-      {:ok, limit} when limit > 10 ->
-        {:error, :too_many_requests_to_user}
+    with {:amount, true} <- {:amount, is_valid_amount?(amount)},
+         {:ok, limit} when limit < 10 <- get_users_pool_limit(user) do
+      GenServer.call(String.to_atom(user), {:deposit, String.to_atom(currency), amount})
+    else
+      {:amount, false} ->
+        {:error, :wrong_arguments}
 
       {:ok, _} ->
-        GenServer.call(String.to_atom(user), {:deposit, String.to_atom(currency), amount})
+        {:error, :too_many_requests_to_user}
+
+      error ->
+        error
+    end
+  end
+
+  @spec withdraw(user :: String.t(), amount :: number(), currency :: String.t()) ::
+          {:ok, number()} | response_error
+  def withdraw(user, amount, currency) do
+    with {:amount, true} <- {:amount, is_valid_amount?(amount)},
+         {:ok, limit} when limit < 10 <- get_users_pool_limit(user) do
+      GenServer.call(String.to_atom(user), {:withdraw, String.to_atom(currency), amount})
+    else
+      {:amount, false} ->
+        {:error, :wrong_arguments}
+
+      {:ok, _} ->
+        {:error, :too_many_requests_to_user}
 
       error ->
         error
@@ -66,5 +95,9 @@ defmodule ExBanking.Worker do
     catch
       :exit, _ -> {:error, :user_does_not_exist}
     end
+  end
+
+  defp is_valid_amount?(amount) do
+    is_number(amount) && amount > 0
   end
 end

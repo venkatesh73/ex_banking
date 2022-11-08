@@ -31,8 +31,8 @@ defmodule ExBanking do
 
   @spec withdraw(user :: String.t(), amount :: number(), currency :: String.t()) ::
           {:ok, number()} | response_error
-  def withdraw(_user, _amount, _currency) do
-    {:error, :user_does_not_exist}
+  def withdraw(user, amount, currency) do
+    Worker.withdraw(user, amount, currency)
   end
 
   @spec get_balance(user :: String.t(), currency :: String.t()) ::
