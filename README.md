@@ -1,6 +1,6 @@
 # ExBanking
 
-**TODO: Add description**
+![Screenshot 2022-11-08 at 8 12 01 PM](https://user-images.githubusercontent.com/68985931/200594414-d43a4675-9dd5-4704-abfc-99af7d11f304.png)
 
 ## Installation
 
