@@ -26,7 +26,7 @@ defmodule ExBanking.DynamicSupervisor do
            }
          ) do
       {:ok, _} -> :ok
-      {:error, {:already_started, _}} -> :user_already_exists
+      {:error, {:already_started, _}} -> {:error, :user_already_exists}
     end
   end
 end
