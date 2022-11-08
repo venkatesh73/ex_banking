@@ -3,16 +3,50 @@ defmodule ExBanking do
   Documentation for `ExBanking`.
   """
 
-  @doc """
-  Hello world.
+  # alias ExBanking.DynamicSupervisor, as: UserSupervisor
 
-  ## Examples
+  @type response_error ::
+          {:error,
+           :wrong_arguments
+           | :user_already_exists
+           | :user_does_not_exist
+           | :not_enough_money
+           | :sender_does_not_exist
+           | :receiver_does_not_exist
+           | :too_many_requests_to_user
+           | :too_many_requests_to_sender
+           | :too_many_requests_to_receiver}
 
-      iex> ExBanking.hello()
-      :world
+  @spec create_user(user :: String.t()) :: :ok | response_error
+  def create_user(user) do
+    ExBanking.DynamicSupervisor.create_user(user)
+  end
 
-  """
-  def hello do
-    :world
+  @spec deposit(user :: String.t(), amount :: number(), currency :: String.t()) ::
+          {:ok, number()} | response_error
+  def deposit(_user, _amount, _currency) do
+    {:error, :user_does_not_exist}
+  end
+
+  @spec withdraw(user :: String.t(), amount :: number(), currency :: String.t()) ::
+          {:ok, number()} | response_error
+  def withdraw(_user, _amount, _currency) do
+    {:error, :user_does_not_exist}
+  end
+
+  @spec get_balance(user :: String.t(), currency :: String.t()) ::
+          {:ok, number()} | response_error
+  def get_balance(_user, _currency) do
+    {:error, :user_does_not_exist}
+  end
+
+  @spec send(
+          from_user :: String.t(),
+          to_user :: String.t(),
+          amount :: number(),
+          currency :: String.t()
+        ) :: {:ok, number(), number()} | response_error
+  def send(_from_user, _to_user, _amount, _currency) do
+    {:error, :sender_does_not_exist}
   end
 end
