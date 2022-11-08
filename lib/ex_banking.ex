@@ -3,7 +3,8 @@ defmodule ExBanking do
   Documentation for `ExBanking`.
   """
 
-  # alias ExBanking.DynamicSupervisor, as: UserSupervisor
+  alias ExBanking.DynamicSupervisor, as: UserSupervisor
+  alias ExBanking.Worker
 
   @type response_error ::
           {:error,
@@ -19,13 +20,13 @@ defmodule ExBanking do
 
   @spec create_user(user :: String.t()) :: :ok | response_error
   def create_user(user) do
-    ExBanking.DynamicSupervisor.create_user(user)
+    UserSupervisor.create_user(user)
   end
 
   @spec deposit(user :: String.t(), amount :: number(), currency :: String.t()) ::
           {:ok, number()} | response_error
-  def deposit(_user, _amount, _currency) do
-    {:error, :user_does_not_exist}
+  def deposit(user, amount, currency) do
+    Worker.deposit(user, amount, currency)
   end
 
   @spec withdraw(user :: String.t(), amount :: number(), currency :: String.t()) ::
