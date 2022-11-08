@@ -128,6 +128,57 @@ defmodule ExBankingTest do
     end
   end
 
+  describe "send/4" do
+    test "successfully transfers amount to receiver" do
+      :ok = ExBanking.create_user("UserA")
+      :ok = ExBanking.create_user("UserB")
+      {:ok, 500.0} = ExBanking.deposit("UserA", 500, "usd")
+
+      assert ExBanking.send("UserA", "UserB", 200, "usd") == {:ok, 300.0, 200.0}
+    end
+
+    test "returns error on invalid amount transfers amount to receiver" do
+      :ok = ExBanking.create_user("UserC")
+      :ok = ExBanking.create_user("UserD")
+      {:ok, 500.0} = ExBanking.deposit("UserC", 500, "usd")
+
+      assert ExBanking.send("UserC", "UserD", "-*//200", "usd") == {:error, :wrong_arguments}
+    end
+
+    test "returns error when doesn't have enough balance" do
+      :ok = ExBanking.create_user("UserE")
+      :ok = ExBanking.create_user("UserF")
+      {:ok, 500.0} = ExBanking.deposit("UserE", 500, "usd")
+
+      assert ExBanking.send("UserE", "UserF", 1000, "usd") == {:error, :not_enough_money}
+    end
+
+    test "returns error when sender doesn't exists" do
+      assert ExBanking.send("UE", "UF", 1000, "usd") == {:error, :sender_does_not_exist}
+    end
+
+    test "returns error when receiver doesn't exists" do
+      :ok = ExBanking.create_user("UG")
+      assert ExBanking.send("UG", "UH", 1000, "usd") == {:error, :receiver_does_not_exist}
+    end
+
+    test "Send performed if there are less requests at the same time" do
+      user = "UI"
+
+      :ok = ExBanking.create_user(user)
+
+      refute sender_load_test(user, 5)
+    end
+
+    test "Send not performed if there are too many requests" do
+      user = "UJ"
+
+      :ok = ExBanking.create_user(user)
+
+      assert sender_load_test(user, 500)
+    end
+  end
+
   def deposit_load_test(user, max_limit) do
     1..max_limit
     |> Enum.map(fn _ -> Task.async(fn -> ExBanking.deposit(user, 100, "usd") end) end)
@@ -147,5 +198,12 @@ defmodule ExBankingTest do
     |> Enum.map(fn _ -> Task.async(fn -> ExBanking.get_balance(user, "usd") end) end)
     |> Enum.map(&Task.await/1)
     |> Enum.any?(&(&1 == {:error, :too_many_requests_to_user}))
+  end
+
+  def sender_load_test(user, max_limit) do
+    1..max_limit
+    |> Enum.map(fn _ -> Task.async(fn -> ExBanking.send(user, "AB", 100, "usd") end) end)
+    |> Enum.map(&Task.await/1)
+    |> Enum.any?(&(&1 == {:error, :too_many_requests_to_sender}))
   end
 end

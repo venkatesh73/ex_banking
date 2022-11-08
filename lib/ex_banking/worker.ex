@@ -109,6 +109,39 @@ defmodule ExBanking.Worker do
     end
   end
 
+  @spec send(
+          from_user :: String.t(),
+          to_user :: String.t(),
+          amount :: number(),
+          currency :: String.t()
+        ) :: {:ok, number(), number()} | response_error
+  def send(from_user, to_user, amount, currency) do
+    with {:sender, {:ok, limit}} when limit < 10 <- {:sender, get_users_pool_limit(from_user)},
+         {:receiver, {:ok, limit}} when limit < 10 <- {:receiver, get_users_pool_limit(to_user)},
+         {:sender, {:ok, from_user_balance}} <- {:sender, withdraw(from_user, amount, currency)},
+         {:receiver, {:ok, to_user_balance}} <- {:receiver, deposit(to_user, amount, currency)} do
+      {:ok, from_user_balance, to_user_balance}
+    else
+      {:amount, false} ->
+        {:error, :wrong_arguments}
+
+      {:sender, {:ok, _}} ->
+        {:error, :too_many_requests_to_sender}
+
+      {:receiver, {:ok, _}} ->
+        {:error, :too_many_requests_to_receiver}
+
+      {:sender, {:error, :user_does_not_exist}} ->
+        {:error, :sender_does_not_exist}
+
+      {:receiver, {:error, :user_does_not_exist}} ->
+        {:error, :receiver_does_not_exist}
+
+      {_, error} ->
+        error
+    end
+  end
+
   defp get_users_pool_limit(user) do
     try do
       {:status, pid, _, _} = :sys.get_status(String.to_atom(user))

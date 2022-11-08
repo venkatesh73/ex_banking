@@ -47,7 +47,7 @@ defmodule ExBanking do
           amount :: number(),
           currency :: String.t()
         ) :: {:ok, number(), number()} | response_error
-  def send(_from_user, _to_user, _amount, _currency) do
-    {:error, :sender_does_not_exist}
+  def send(from_user, to_user, amount, currency) do
+    Worker.send(from_user, to_user, amount, currency)
   end
 end
