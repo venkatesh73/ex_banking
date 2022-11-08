@@ -37,8 +37,8 @@ defmodule ExBanking do
 
   @spec get_balance(user :: String.t(), currency :: String.t()) ::
           {:ok, number()} | response_error
-  def get_balance(_user, _currency) do
-    {:error, :user_does_not_exist}
+  def get_balance(user, currency) do
+    Worker.get_balance(user, currency)
   end
 
   @spec send(

@@ -94,6 +94,40 @@ defmodule ExBankingTest do
     end
   end
 
+  describe "get_balance/2" do
+    test "successfully retrieves users balance" do
+      :ok = ExBanking.create_user("Bernad")
+      {:ok, 500.0} = ExBanking.deposit("Bernad", 500, "usd")
+      assert ExBanking.get_balance("Bernad", "usd") == {:ok, 500.0}
+    end
+
+    test "returns error when try to withdraw invalid currency" do
+      :ok = ExBanking.create_user("Kuthrapalli")
+      {:ok, 500.0} = ExBanking.deposit("Kuthrapalli", 500, "usd")
+      assert ExBanking.get_balance("Kuthrapalli", "rus") == {:error, :wrong_arguments}
+    end
+
+    test "returns user doesn't exists when invalid user is given for withdraw" do
+      assert ExBanking.withdraw("Yadvik", 1000, "usd") == {:error, :user_does_not_exist}
+    end
+
+    test "Getbalance performed if there are less requests at the same time" do
+      user = "Sathvik"
+
+      :ok = ExBanking.create_user(user)
+
+      refute get_balance_load_test(user, 5)
+    end
+
+    test "Getbalance not performed if there are too many requests" do
+      user = "Sharma"
+
+      :ok = ExBanking.create_user(user)
+
+      assert get_balance_load_test(user, 500)
+    end
+  end
+
   def deposit_load_test(user, max_limit) do
     1..max_limit
     |> Enum.map(fn _ -> Task.async(fn -> ExBanking.deposit(user, 100, "usd") end) end)
@@ -104,6 +138,13 @@ defmodule ExBankingTest do
   def withdrawal_load_test(user, max_limit) do
     1..max_limit
     |> Enum.map(fn _ -> Task.async(fn -> ExBanking.withdraw(user, 100, "usd") end) end)
+    |> Enum.map(&Task.await/1)
+    |> Enum.any?(&(&1 == {:error, :too_many_requests_to_user}))
+  end
+
+  def get_balance_load_test(user, max_limit) do
+    1..max_limit
+    |> Enum.map(fn _ -> Task.async(fn -> ExBanking.get_balance(user, "usd") end) end)
     |> Enum.map(&Task.await/1)
     |> Enum.any?(&(&1 == {:error, :too_many_requests_to_user}))
   end

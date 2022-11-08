@@ -51,6 +51,13 @@ defmodule ExBanking.Worker do
     end
   end
 
+  def handle_call({:get_balance, currency}, _from, state) do
+    case state[currency] do
+      nil -> {:reply, {:error, :wrong_arguments}, state}
+      amount -> {:reply, {:ok, Float.floor(amount / 1, 2)}, state}
+    end
+  end
+
   @spec deposit(user :: String.t(), amount :: number(), currency :: String.t()) ::
           {:ok, number()} | response_error
   def deposit(user, amount, currency) do
@@ -81,6 +88,21 @@ defmodule ExBanking.Worker do
 
       {:ok, _} ->
         {:error, :too_many_requests_to_user}
+
+      error ->
+        error
+    end
+  end
+
+  @spec get_balance(user :: String.t(), currency :: String.t()) ::
+          {:ok, number()} | response_error
+  def get_balance(user, currency) do
+    case get_users_pool_limit(user) do
+      {:ok, limit} when limit > 10 ->
+        {:error, :too_many_requests_to_user}
+
+      {:ok, _} ->
+        GenServer.call(String.to_atom(user), {:get_balance, String.to_atom(currency)})
 
       error ->
         error
